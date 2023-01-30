@@ -12,11 +12,12 @@ import java.sql.SQLException;
 public class Main {
     public static void main(String[] args) {
         // Connexion à la base de données
-        String url = "jdbc:mysql://localhost:3306/mydatabase";
+        String url = "jdbc:mysql://localhost:3306/java_jdbc";
         String user = "root";
-        String password = "password";
+        String password = "";
         Connection con = null;
         try {
+            System.out.println("Connexion à la base de données réussi");
             con = DriverManager.getConnection(url, user, password);
         } catch (SQLException e) {
             System.out.println("Connexion à la base de données échouée");
@@ -28,6 +29,7 @@ public class Main {
         int port = 5555;
         ServerSocket serverSocket = null;
         try {
+            System.out.println("Création du socket réussi");
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {
             System.out.println("Création du socket échouée");
@@ -49,8 +51,8 @@ public class Main {
                 // if (object instanceof Book) {
                      String sql = "INSERT INTO books (title, author) VALUES (?, ?)";
                      PreparedStatement statement = con.prepareStatement(sql);
-                //     statement.setString(1, "booktitle");
-                //     statement.setString(2, "bookauthor");
+                     statement.setString(1, "booktitle");
+                     statement.setString(2, "bookauthor");
                      statement.executeUpdate();
                 // } else if (object instanceof Reader) {
                 //     Reader reader = (Reader) object;
