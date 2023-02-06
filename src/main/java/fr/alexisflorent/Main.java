@@ -9,24 +9,14 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
 
 public class Main {
     public static void main(String[] args) {
         // Connexion à la base de données
-        String url = "jdbc:mysql://localhost:3306/mabd";
-        String user = "root";
-        String password = "root";
-        Connection con;
-        try {
-            System.out.println("Connexion à la base de données réussi");
-            con = DriverManager.getConnection(url, user, password);
-        } catch (SQLException e) {
-            System.out.println("Connexion à la base de données échouée");
-            e.printStackTrace();
-            return;
-        }
+        Connection con = connectToDatabase();
+
+        // Création des tables si elles n'existent pas
+        createTable(con);
 
         // Création d'un socket serveur
         int port = 5555;
@@ -95,6 +85,54 @@ public class Main {
             } catch (IOException | SQLException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    /**
+     * Connexion à la base de données
+     * @return Connection
+     */
+    private static Connection connectToDatabase() {
+        // Connexion à la base de données
+        String url = "jdbc:mysql://localhost:3306/mabd";
+        String user = "root";
+//        String password = "root";
+        String password = "iut";
+        Connection con;
+        try {
+            System.out.println("Connexion à la base de données réussi");
+            con = DriverManager.getConnection(url, user, password);
+        } catch (SQLException e) {
+            System.out.println("Connexion à la base de données échouée");
+            e.printStackTrace();
+            return null;
+        }
+        return con;
+    }
+
+    /**
+     * Création des tables si elles n'existent pas
+     * @param con Connection
+     * @return void
+     */
+    private static void createTable(Connection con) {
+        String sqlLivres = "CREATE TABLE IF NOT EXISTS livres " +
+                "(id INT NOT NULL AUTO_INCREMENT, " +
+                "titre VARCHAR(255), " +
+                "auteur VARCHAR(255), " +
+                "nb_pages INT, PRIMARY KEY (id))";
+
+        String sqlLecteurs = "CREATE TABLE IF NOT EXISTS lecteurs " +
+                "(id INT NOT NULL AUTO_INCREMENT, " +
+                "nom VARCHAR(255), " +
+                "prenom VARCHAR(255), " +
+                "email VARCHAR(255), PRIMARY KEY (id))";
+
+        try {
+            con.prepareStatement(sqlLivres).executeUpdate();
+            con.prepareStatement(sqlLecteurs).executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
     }
 }
