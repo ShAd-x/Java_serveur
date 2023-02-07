@@ -2,15 +2,14 @@ package fr.alexisflorent;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 
 public class Main {
+
     public static void main(String[] args) {
         // Connexion à la base de données
         Connection con = connectToDatabase();
@@ -20,7 +19,7 @@ public class Main {
 
         // Création d'un socket serveur
         int port = 5555;
-        ServerSocket serverSocket = null;
+        ServerSocket serverSocket;
         try {
             System.out.println("Création du socket réussi");
             serverSocket = new ServerSocket(port);
@@ -39,9 +38,23 @@ public class Main {
 
                 // Réception des données
                 ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+                // On lit les objets
                 Object livres = ois.readObject();
                 Object lecteurs = ois.readObject();
 
+                // On vérifie si l'utilisateur veut afficher la liste des livres
+                if (livres != null && livres.equals("liste")) {
+                    afficherListe("livres", con, socket);
+                    continue;
+                }
+
+                // On vérifie si l'utilisateur veut afficher la liste des lecteurs
+                if (lecteurs != null && lecteurs.equals("liste")) {
+                    afficherListe("lecteurs", con, socket);
+                    continue;
+                }
+
+                // On convertit l'object de livres en ArrayList
                 ArrayList<String[]> livresList = (ArrayList<String[]>) livres;
                 // Pour chaque livre dans la liste
                 for (String[] livre : livresList) {
@@ -49,9 +62,11 @@ public class Main {
                     String titre = livre[0];
                     String auteur = livre[1];
                     int nbPages = 0;
+                    // On vérifie que le nombre de pages est bien un nombre
                     try {
                         nbPages = Integer.parseInt(livre[2]);
                     } catch (NumberFormatException e) {
+                        // Si ce n'est pas le cas, on laisse le nombre de pages à 0 et on affiche un message
                         System.out.println("Le nombre de pages n'est pas un nombre, mais le livre est quand même enregistré (pages = 0)");
                     }
                     // On enregistre le livre dans la base de données
@@ -63,9 +78,15 @@ public class Main {
                     statement.executeUpdate();
                 }
 
+                // On convertit l'object de lecteurs en ArrayList
                 ArrayList<String[]> lecteursList = (ArrayList<String[]>) lecteurs;
                 // Pour chaque lecteur dans la liste
                 for (String[] lecteur : lecteursList) {
+                    // Si le premier mot est "liste" et que les deux autres sont vides, on affiche la liste des livres
+                    if (lecteur[0].equals("liste") && lecteur[1].equals("") && lecteur[2].equals("")) {
+                        afficherListe("lecteurs", con, socket);
+                        return;
+                    }
                     // On récupère les données : nom, prenom, email
                     String nom = lecteur[0];
                     String prenom = lecteur[1];
@@ -96,8 +117,7 @@ public class Main {
         // Connexion à la base de données
         String url = "jdbc:mysql://localhost:3306/mabd";
         String user = "root";
-//        String password = "root";
-        String password = "iut";
+        String password = "root";
         Connection con;
         try {
             System.out.println("Connexion à la base de données réussi");
@@ -108,6 +128,41 @@ public class Main {
             return null;
         }
         return con;
+    }
+
+    /**
+     * Affiche la liste des livres ou des lecteurs
+     * @param table String
+     * @param con Connection
+     * @param socket Socket
+     */
+    private static void afficherListe(String table, Connection con, Socket socket) {
+        try {
+            String sql = "SELECT * FROM " + table;
+            PreparedStatement statement = con.prepareStatement(sql);
+            ResultSet resultSet = statement.executeQuery();
+            ArrayList<String[]> liste = new ArrayList<>();
+            while (resultSet.next()) {
+                String[] listeTab = new String[4];
+                listeTab[0] = resultSet.getString("id");
+                if (table.equals("livres")) {
+                    listeTab[1] = resultSet.getString("titre");
+                    listeTab[2] = resultSet.getString("auteur");
+                    listeTab[3] = resultSet.getString("nb_pages");
+                } else if (table.equals("lecteurs")) {
+                    listeTab[1] = resultSet.getString("nom");
+                    listeTab[2] = resultSet.getString("prenom");
+                    listeTab[3] = resultSet.getString("email");
+                }
+                liste.add(listeTab);
+            }
+            ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
+            oos.writeObject(liste);
+            oos.close();
+            socket.close();
+        } catch (SQLException | IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
